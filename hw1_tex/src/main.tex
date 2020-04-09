@@ -1,0 +1,49 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}          
+\usepackage{graphicx}
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage{setspace}\onehalfspacing
+\usepackage[loose,nice]{units} %replace "nice" by "ugly" for units in upright fractions
+ 
+\title{Spatio-temporal Data Analysis HW1}
+\author{2020311198 Dongook Son}
+\date{Spring 2020}
+ 
+ 
+\begin{document}
+\maketitle
+
+\section*{Q1}
+\subsection*{(a)}
+Prove $E(Y)=E(\mu+LZ)$ and $V(Y)=V(\mu+LZ)$
+
+\begin{proof}
+  \begin{align*}
+    E(Y) &= E(\mu + LZ) \\
+    &= \mu+E(LZ) \\
+    &= \mu+LE(Z) & \text{(linearity property)} \\
+    &= \mu \\
+    V(Y) &= E([(Y-E(Y))(Y-E(Y))']) \\
+    &= E([(Y-\mu)(Y-\mu)']) \\
+    &= E([(LZ)(LZ)']) \\
+    &= E([LZZ'L']) \\
+    &= LE(ZZ')L' \\
+    &= LV(Z)L' \\
+    &= LIL' \\
+    &= LL' \\
+    &= \Sigma
+  \end{align*}
+\end{proof}
+
+\subsection*{(b)}
+\subsection*{(c)}
+ 
+
+
+\section*{Q2}
+\subsection*{(a)}
+\subsection*{(b)}
+\subsection*{(c)}
+\subsection*{(d)}
+ 
+\end{document}  
