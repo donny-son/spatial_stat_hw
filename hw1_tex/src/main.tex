@@ -8,7 +8,6 @@
 \usepackage{bm}
 \usepackage[svgnames]{xcolor}
 \usepackage{amsthm, amsmath, amssymb}
-\usepackage{setspace}\onehalfspacing
 \usepackage[loose,nice]{units} %replace "nice" by "ugly" for units in upright fractions
  
 \title{Spatio-temporal Data Analysis HW1}
@@ -134,7 +133,6 @@ points(1:100, Y_sample,
        pch = 12,
        col = transparent("blue", trans.val = .1))
 \end{lstlisting}
-
 \begin{figure}[h!]
 \center{\includegraphics[scale=0.18]{image.png}}
 \end{figure}
@@ -142,8 +140,108 @@ The blue squares are samples from an identity matrix sigma and others are from c
 
 \section*{Q2}
 \subsection*{(a)}
+    \begin{lstlisting}
+CAtemp_with_coordinates <- cbind(CAtemp, coordinates(CAtemp))
+ordinary_least_squares <- lm(avgtemp ~ lon + lat + elevation, data = CAtemp_with_coordinates)
+predictions <- predict(ordinary_least_squares, newdata = CAtemp_with_coordinates)
+residuals <- CAtemp_with_coordinates$avgtemp - predictions
+CAtemp_with_residuals <- cbind(CAtemp_with_coordinates, residuals); names(CAtemp_with_residuals)[5] <- 'residuals'
+
+range(CAtemp_with_residuals$residuals)
+breaks <- -7:7
+ploteqc(CAtemp_with_residuals, CAtemp_with_residuals$residuals, breaks, pch = 19)
+map("county", region = "california", add = TRUE)
+title(main = "Residual plot")
+    \end{lstlisting}
+
+\includegraphics[scale=0.1]{residual_plot.png}
+
+Plot of residuals as colored points onto map of CA. \\
+Residuals seem to have a shrinking pattern as it gets closer to the border.
+This means that there lies unmeasured spatial dependency for the data.
+\begin{lstlisting}
+par(mfrow = c(1,2))
+range(CAtemp$avgtemp)
+breaks <- 40:75
+ploteqc(CAtemp, CAtemp$avgtemp, breaks, pch = 19)
+map("county", region = "california", add = TRUE)
+title(main = "Average Annual Temperatures, 1961-1990, Degrees F")
+ploteqc(CAtemp_with_predictions, CAtemp_with_predictions$predictions, breaks, pch = 19)
+map("county", region = "california", add = TRUE)
+title(main = "Prediction plot")
+\end{lstlisting}
+
+\includegraphics[scale=0.18]{prediction_plot.png}
+This is the prediction plot side by side with the original data.
+
 \subsection*{(b)}
+After non-parametric variogram estimation we can fit a exponential(parametric) curve using the residuals.
+The parameters are as follows. \\
+$
+\hat{\tau}^2 = 1.978, \hat{\sigma}^2 = 4.804, \hat{\rho}^2 = 88.937.
+$
+\begin{lstlisting}
+variogram <- variogram(residuals ~ 1, data = CAtemp_with_coordinates)
+variogram.fit <- fit.variogram(variogram, vgm(1, "Exp", 100, 2))
+plot(variogram, variogram.fit)
+
+sigma_sqrd_hat <- variogram.fit$psill[2]
+tau_sqrd_hat <- variogram.fit$psill[1]
+rho_hat <- variogram.fit$range[2]
+\end{lstlisting}
+
+\includegraphics[width=\textwidth]{variogram.png}
+
 \subsection*{(c)}
+$\hat{\beta}_{gls} = (X'\Sigma X)^{-1}X'\Sigma^{-1}Y$, where $\hat{\Sigma}_{i,j} = C(s_{i}-s_{j})$ \\
+$C(s_{i}, s_{j})$ is the exponential covariance function. \\
+
+$C(s_{i}, s_{j})$ =
+\left\{
+    \begin{array}{ll}
+        $\tau^2 + \sigma^2$  & \text{if } s_{i}-s_{j} = 0 \\
+        $\sigma^2 exp(-\Vert s_{i}-s_{j} \Vert / \rho)$ & \text{else}
+    \end{array}
+\right.
+
+
+\begin{lstlisting}
+# Get distance matrix.
+distance_matrix <- rdist(coordinates(CAtemp_with_coordinates))
+dim(distance_matrix) # (200, 200)
+
+# Create cov matrix.
+exponential_covariance <- function(distance_matrix, tau_sqrd_hat, sigma_sqrd_hat, rho_hat){
+  n = dim(distance_matrix)[1]
+  matrix_with_no_nugget <- matrix(rep(0, n*n), ncol=n)
+  print(dim(matrix_with_no_nugget))
+  for (i in 1:n){
+    for (j in 1:n){
+      h = distance_matrix[i,j]
+      matrix_with_no_nugget[i,j] <- sigma_sqrd_hat * exp(-h/rho_hat)
+    }
+  }
+  matrix_with_nugget <- (sigma_sqrd_hat + tau_sqrd_hat) * diag(n)
+  print(dim(matrix_with_nugget))
+  return(matrix_with_no_nugget + matrix_with_nugget)
+}
+covariance_matrix_hat <- exponential_covariance(distance_matrix, tau_sqrd_hat, sigma_sqrd_hat, rho_hat)
+
+# Invert covariance matrix and store.
+inverse_covariance_matrix_hat <- solve(covariance_matrix_hat)
+
+# Create X
+X <- cbind(CAtemp$elevation, coordinates(CAtemp)); colnames(X) <- c('elevation', 'lon', 'lat')
+y <- CAtemp$avgtemp
+
+# Form beta_gls
+(beta_gls <- solve(t(X) \%*\% inverse_covariance_matrix_hat \%*\% X) \%*\% t(X)\%*\% inverse_covariance_matrix_hat \%*\%y)
+\end{lstlisting}
+Betas for elevation, lon and lat is -0.006811685, -0.789559019, -0.961641363 respectively.
+
+
 \subsection*{(d)}
+
+
  
 \end{document}  
